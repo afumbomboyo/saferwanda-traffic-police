@@ -7,15 +7,33 @@ import { Sidebar } from './Sidebar';
 
 export const ClientLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [darkMode, setDarkMode] = useState<boolean>(true);
+  const [mounted, setMounted] = useState<boolean>(false);
 
-  // Apply dark mode class to html document
+  // Initialize theme from localStorage or system preference
   useEffect(() => {
+    setMounted(true);
+    const savedTheme = localStorage.getItem('saferwanda_police_theme');
+    if (savedTheme === 'light') {
+      setDarkMode(false);
+    } else if (savedTheme === 'dark') {
+      setDarkMode(true);
+    } else {
+      setDarkMode(true); // Default to sleek police dark mode
+    }
+  }, []);
+
+  // Sync dark mode class on <html> document element and save to localStorage
+  useEffect(() => {
+    if (!mounted) return;
+
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('saferwanda_police_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('saferwanda_police_theme', 'light');
     }
-  }, [darkMode]);
+  }, [darkMode, mounted]);
 
   return (
     <ReviewQueueProvider>
