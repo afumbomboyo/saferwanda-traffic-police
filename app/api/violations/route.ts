@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
-import { fetchViolationsFromFirestore, saveViolationToFirestore } from '../../../lib/services/violationsService';
 import { INITIAL_VIOLATION_SESSIONS } from '../../../lib/data/mockData';
+import { adminDb } from '../../../lib/firebase/admin';
+import { mapFirestoreDocToSession } from '../../../lib/services/violationMapper';
 
 // GET /api/violations - Returns violation records
 export async function GET() {
   try {
-    const firestoreData = await fetchViolationsFromFirestore();
+    const snapshot = await adminDb.collection('violations').get();
+    const firestoreData = snapshot.docs.map((doc) =>
+      mapFirestoreDocToSession(doc.id, doc.data())
+    );
     if (firestoreData && firestoreData.length > 0) {
       return NextResponse.json({ success: true, count: firestoreData.length, data: firestoreData });
     }
@@ -29,7 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await saveViolationToFirestore(body);
+    await adminDb.collection('violations').doc(body.violation_id).set(body, { merge: true });
     return NextResponse.json({ success: true, message: `Violation ${body.violation_id} persisted to Firestore.` });
   } catch (error: any) {
     return NextResponse.json(
