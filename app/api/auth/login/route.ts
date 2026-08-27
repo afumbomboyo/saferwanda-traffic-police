@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchAndVerifyPoliceOfficer, mapPoliceOfficerToProfile } from '../../../../lib/services/officerService';
+import { adminDb } from '../../../../lib/firebase/admin';
 
 // Server-Side Private Configuration Environment Variables (NOT exposed to browser)
 const SAFERWANDA_BACKEND_API_URL = process.env.SAFERWANDA_BACKEND_API_URL;
@@ -16,8 +16,39 @@ export async function POST(request: Request) {
 
     const identifier = police_id || body.service_number || 'RW-POL-001245';
 
-    // 1. Identify Officer & Check Status Eligibility ("active" or "enrollment_ready") and Enrollment Completion ("completed: true")
-    const officerDoc = await fetchAndVerifyPoliceOfficer(identifier);
+    // Resolve the officer server-side; this route must not import the browser Firebase SDK.
+    const officerSnapshot = await adminDb
+      .collection('police_officers')
+      .where('identity.police_id', '==', identifier)
+      .limit(1)
+      .get();
+
+    if (officerSnapshot.empty) {
+      return NextResponse.json(
+        { success: false, error: `Police Officer with ID "${identifier}" not found.` },
+        { status: 404 }
+      );
+    }
+
+    const officerRecord = officerSnapshot.docs[0].data();
+    const officerDoc = {
+      police_id: officerRecord.identity?.police_id ?? officerRecord.police_id,
+      service_number: officerRecord.service_number,
+      name: officerRecord.identity?.full_name ?? officerRecord.name ?? 'Police Officer',
+      rank: officerRecord.role?.rank ?? officerRecord.rank ?? '',
+      station: officerRecord.employment?.station ?? officerRecord.station ?? '',
+      department: officerRecord.employment?.department ?? officerRecord.department ?? '',
+      role: typeof officerRecord.role === 'string' ? officerRecord.role : officerRecord.role?.title ?? '',
+      enrollment: officerRecord.enrollment,
+      status: officerRecord.status,
+    };
+
+    if (officerDoc.status !== 'active' && officerDoc.status !== 'enrollment_ready') {
+      return NextResponse.json(
+        { success: false, error: 'Officer is not authorized to authenticate.' },
+        { status: 403 }
+      );
+    }
 
     // 2. Factor 1 Verification: WebAuthn Fingerprint Assertion against RP ID from env
     const rpId = WEBAUTHN_RP_ID || 'saferwanda.com';
@@ -52,7 +83,22 @@ export async function POST(request: Request) {
     }
 
     // Derive authenticated identity strictly from backend verified record
-    const verifiedProfile = mapPoliceOfficerToProfile(officerDoc);
+    const verifiedProfile = {
+      officerId: officerDoc.police_id,
+      policeId: officerDoc.police_id,
+      serviceNumber: officerDoc.service_number,
+      badgeNumber: officerDoc.service_number || officerDoc.police_id,
+      name: officerDoc.name,
+      rank: officerDoc.rank,
+      station: officerDoc.station,
+      district: officerDoc.station.includes('Nyarugenge') ? 'Nyarugenge, Kigali City' : 'Remera, Kigali City',
+      department: officerDoc.department,
+      role: officerDoc.role,
+      shiftStartedAt: new Date().toISOString(),
+      reviewsCompletedToday: 42,
+      accuracyRate: 99.4,
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+    };
 
     return NextResponse.json({
       success: true,
