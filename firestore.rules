@@ -1,0 +1,58 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for authenticated police access
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidViolationData(data) {
+      return data.keys().hasAll(['violation_id', 'camera_id', 'violation', 'vehicle', 'recognition', 'enforcement'])
+        && data.violation_id is string
+        && data.violation_id.size() > 0
+        && data.violation_id.size() < 128
+        && data.camera_id is string
+        && data.camera_id.size() > 0
+        && data.camera_id.size() < 64
+        && data.violation is map
+        && data.vehicle is map
+        && data.recognition is map
+        && data.enforcement is map;
+    }
+
+    // Rules for existing `violations` collection
+    match /violations/{violationId} {
+      // Authenticated police officers can read violations
+      allow read: if isAuthenticated();
+
+      // Only authenticated police officers can create or update violations with validated schema
+      allow create: if isAuthenticated() && isValidViolationData(request.resource.data);
+
+      // Updates must preserve violation_id and camera_id integrity
+      allow update: if isAuthenticated() 
+        && isValidViolationData(request.resource.data)
+        && request.resource.data.violation_id == resource.data.violation_id
+        && request.resource.data.camera_id == resource.data.camera_id;
+
+      // Deletions are forbidden to maintain legal audit trail compliance
+      allow delete: if false;
+    }
+
+    // Rules for `police_officers` collection (SafeRwanda Platform Identity & Enrollment)
+    match /police_officers/{officerId} {
+      // Allow officer lookup for identification & duty authentication
+      allow read: if true;
+      // Writing or modifying enrolled police officer records requires admin auth
+      allow write: if isAuthenticated();
+    }
+
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+

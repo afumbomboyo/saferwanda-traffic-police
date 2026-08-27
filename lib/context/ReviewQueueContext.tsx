@@ -11,6 +11,12 @@ import {
   MetricStats 
 } from '../types';
 import { INITIAL_VIOLATION_SESSIONS, MOCK_OFFICER } from '../data/mockData';
+import { 
+  subscribeToFirestoreViolations, 
+  saveViolationToFirestore, 
+  seedInitialViolationsToFirestore 
+} from '../services/violationsService';
+import { RealViolationRecord } from '../types';
 
 // Simulated National Vehicle Registry Database lookup
 const SIMULATED_REGISTRY: Record<string, VehicleRegistryMatch> = {
@@ -136,6 +142,21 @@ export const ReviewQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [filterStatus, setFilterStatus] = useState<ViolationStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  // Subscribe to real-time Firestore violations collection updates & seed if needed
+  useEffect(() => {
+    // Attempt seeding initial data into Firestore if empty
+    seedInitialViolationsToFirestore(INITIAL_VIOLATION_SESSIONS);
+
+    // Subscribe to Firestore `violations` collection changes
+    const unsubscribe = subscribeToFirestoreViolations((firestoreSessions) => {
+      if (firestoreSessions && firestoreSessions.length > 0) {
+        setSessions(firestoreSessions);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Persist to local storage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -151,12 +172,14 @@ export const ReviewQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Metric stats computation
   const stats: MetricStats = useMemo(() => {
     const pending = sessions.filter(s => s.status === 'PENDING_MANUAL_REVIEW').length;
+    const automatic = sessions.filter(s => s.status === 'AUTOMATIC_ENFORCEMENT' || s.realRecord?.enforcement.status === 'pending_payment').length;
     const approved = sessions.filter(s => s.status === 'APPROVED_CITATION_ISSUED').length;
     const dismissed = sessions.filter(s => s.status === 'REJECTED_DISMISSED').length;
     const flagged = sessions.filter(s => s.status === 'FLAGGED_FOR_INVESTIGATION').length;
 
     return {
       pendingReviews: pending,
+      automaticEnforcementsToday: automatic,
       approvedToday: approved,
       dismissedToday: dismissed,
       flaggedToday: flagged,
@@ -203,7 +226,7 @@ export const ReviewQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
   };
 
-  const approveSession = (
+  const approveSession = async (
     sessionId: string,
     correctedPlate: string,
     violationType: ViolationType,
@@ -211,6 +234,55 @@ export const ReviewQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
     notes?: string
   ) => {
     const registryLookup = lookupPlateInRegistry(correctedPlate);
+    const targetSession = sessions.find(s => s.sessionId === sessionId);
+
+    if (targetSession) {
+      const updatedRealRecord: RealViolationRecord = {
+        violation_id: targetSession.realRecord?.violation_id || targetSession.sessionId,
+        camera_id: targetSession.realRecord?.camera_id || targetSession.camera.cameraId,
+        identity: targetSession.realRecord?.identity || {
+          violation_id: targetSession.sessionId,
+          violation_session_id: `SESS-${targetSession.sessionId}`,
+        },
+        violation: {
+          type: violationType.toLowerCase(),
+          timestamp: targetSession.timestamp,
+          fine_amount_rwf: fineAmountRwf,
+        },
+        vehicle: {
+          plate: correctedPlate,
+          plate_detected: true,
+          owner_name: registryLookup.ownerName || targetSession.realRecord?.vehicle.owner_name || null,
+          owner_phone: registryLookup.ownerPhone || targetSession.realRecord?.vehicle.owner_phone || null,
+          owner_email: targetSession.realRecord?.vehicle.owner_email || null,
+          make: registryLookup.make || targetSession.realRecord?.vehicle.make,
+          model: registryLookup.model || targetSession.realRecord?.vehicle.model,
+          color: registryLookup.color || targetSession.realRecord?.vehicle.color,
+        },
+        recognition: {
+          status: 'recognized',
+          plate_detected: true,
+          plate_confidence: 1.0,
+          ocr_confidence: 1.0,
+          plate_detection_confidence: 1.0,
+          processed_at: new Date().toISOString(),
+        },
+        evidence: targetSession.realRecord?.evidence || { snapshot_score: 0.95 },
+        enforcement: {
+          status: 'approved',
+          fine_generated: true,
+          notification_sent: true,
+          payment_status: 'pending',
+        },
+      };
+
+      // Persist to Firestore `violations` collection
+      try {
+        await saveViolationToFirestore(updatedRealRecord);
+      } catch (err) {
+        console.warn('Firestore save attempted (updating local state):', err);
+      }
+    }
 
     setSessions(prev =>
       prev.map(s => {
@@ -245,7 +317,52 @@ export const ReviewQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
     nextSession();
   };
 
-  const rejectSession = (sessionId: string, reason: string) => {
+  const rejectSession = async (sessionId: string, reason: string) => {
+    const targetSession = sessions.find(s => s.sessionId === sessionId);
+
+    if (targetSession) {
+      const updatedRealRecord: RealViolationRecord = {
+        violation_id: targetSession.realRecord?.violation_id || targetSession.sessionId,
+        camera_id: targetSession.realRecord?.camera_id || targetSession.camera.cameraId,
+        identity: targetSession.realRecord?.identity || {
+          violation_id: targetSession.sessionId,
+          violation_session_id: `SESS-${targetSession.sessionId}`,
+        },
+        violation: {
+          type: targetSession.realRecord?.violation.type || 'speeding',
+          timestamp: targetSession.timestamp,
+          fine_amount_rwf: 0,
+        },
+        vehicle: targetSession.realRecord?.vehicle || {
+          plate: null,
+          plate_detected: false,
+          owner_name: null,
+          owner_phone: null,
+          owner_email: null,
+        },
+        recognition: targetSession.realRecord?.recognition || {
+          status: 'not_recognized',
+          plate_detected: false,
+          plate_confidence: null,
+          ocr_confidence: null,
+          plate_detection_confidence: null,
+        },
+        evidence: targetSession.realRecord?.evidence || { snapshot_score: 0.2 },
+        enforcement: {
+          status: 'dismissed',
+          fine_generated: false,
+          notification_sent: false,
+          payment_status: 'not_generated',
+        },
+      };
+
+      try {
+        await saveViolationToFirestore(updatedRealRecord);
+      } catch (err) {
+        console.warn('Firestore save attempted (updating local state):', err);
+      }
+    }
+
     setSessions(prev =>
       prev.map(s => {
         if (s.sessionId === sessionId) {
@@ -276,7 +393,53 @@ export const ReviewQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
     nextSession();
   };
 
-  const flagSession = (sessionId: string, note: string) => {
+  const flagSession = async (sessionId: string, note: string) => {
+    const targetSession = sessions.find(s => s.sessionId === sessionId);
+
+    if (targetSession) {
+      const updatedRealRecord: RealViolationRecord = {
+        violation_id: targetSession.realRecord?.violation_id || targetSession.sessionId,
+        camera_id: targetSession.realRecord?.camera_id || targetSession.camera.cameraId,
+        identity: targetSession.realRecord?.identity || {
+          violation_id: targetSession.sessionId,
+          violation_session_id: `SESS-${targetSession.sessionId}`,
+        },
+        violation: {
+          type: 'suspected_cloned_plate',
+          timestamp: targetSession.timestamp,
+          fine_amount_rwf: 0,
+        },
+        vehicle: targetSession.realRecord?.vehicle || {
+          plate: targetSession.aiDetection.suggestedPlate || null,
+          plate_detected: Boolean(targetSession.aiDetection.suggestedPlate),
+          owner_name: null,
+          owner_phone: null,
+          owner_email: null,
+        },
+        recognition: targetSession.realRecord?.recognition || {
+          status: 'low_confidence',
+          plate_detected: Boolean(targetSession.aiDetection.suggestedPlate),
+          plate_confidence: 0.5,
+          ocr_confidence: 0.5,
+          plate_detection_confidence: 0.5,
+        },
+
+        evidence: targetSession.realRecord?.evidence || { snapshot_score: 0.5 },
+        enforcement: {
+          status: 'flagged',
+          fine_generated: false,
+          notification_sent: false,
+          payment_status: 'investigating',
+        },
+      };
+
+      try {
+        await saveViolationToFirestore(updatedRealRecord);
+      } catch (err) {
+        console.warn('Firestore save attempted (updating local state):', err);
+      }
+    }
+
     setSessions(prev =>
       prev.map(s => {
         if (s.sessionId === sessionId) {
@@ -313,6 +476,7 @@ export const ReviewQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
       localStorage.removeItem('saferwanda_police_sessions');
     }
   };
+
 
   return (
     <ReviewQueueContext.Provider

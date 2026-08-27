@@ -173,8 +173,282 @@ function createPlateCropSvg(plateText: string, confidenceText: string, isNoPlate
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// Initial Mock Sessions representing realistic Traffic Police Exceptions across Rwanda
+// Initial Mock Sessions representing realistic Traffic Police Enforcement & Exceptions across Rwanda
 export const INITIAL_VIOLATION_SESSIONS: ViolationSession[] = [
+  // 1. AUTOMATIC ENFORCEMENT CASE (Matching exact prompt schema)
+  {
+    sessionId: 'VIO-CAM_001-20260824-001',
+    timestamp: '2026-08-24T09:42:31.000Z',
+    exceptionReason: 'NONE_AUTOMATIC',
+    status: 'AUTOMATIC_ENFORCEMENT',
+    urgencyScore: 1,
+    camera: {
+      cameraId: 'CAM_001',
+      locationName: 'KN 3 Rd - City Center Corridor',
+      sector: 'Nyarugenge',
+      district: 'Nyarugenge',
+      province: 'Kigali City',
+      coordinates: { lat: -1.9441, lng: 30.0619 },
+      recordedSpeedKmh: 45,
+      speedLimitKmh: 50,
+      laneNumber: 1,
+      status: 'ONLINE',
+      lastPingTime: '2026-08-24T09:43:00Z',
+    },
+    evidenceSnapshots: {
+      bestSnapshotUrl: createTrafficSnapshotSvg('RAB123A', '#1e293b', 'Sedan', 45, 50, 'KN 3 Rd - City Center', '09:42:31'),
+      contextSnapshotUrl: createTrafficSnapshotSvg('RAB123A', '#1e293b', 'Sedan', 45, 50, 'KN 3 Rd - City Center', '09:42:31'),
+      plateCropUrl: createPlateCropSvg('RAB123A', '94.0%', false, false),
+    },
+    aiDetection: {
+      suggestedPlate: 'RAB123A',
+      overallConfidence: 94.0,
+      characterConfidences: [
+        { char: 'R', confidence: 96 },
+        { char: 'A', confidence: 95 },
+        { char: 'B', confidence: 94 },
+        { char: '1', confidence: 93 },
+        { char: '2', confidence: 94 },
+        { char: '3', confidence: 92 },
+        { char: 'A', confidence: 94 },
+      ],
+      aiVehicleClass: 'Sedan',
+      aiVehicleColor: 'Dark Grey',
+    },
+    registryMatch: {
+      found: true,
+      plateNumber: 'RAB123A',
+      ownerName: 'John Doe',
+      ownerPhone: '+25078XXXXXXX',
+      make: 'Toyota',
+      model: 'RAV4',
+      color: 'Dark Grey',
+      registrationStatus: 'ACTIVE',
+    },
+    realRecord: {
+      violation_id: "VIO-CAM_001-20260824-001",
+      camera_id: "CAM_001",
+      identity: {
+        violation_id: "VIO-CAM_001-20260824-001",
+        violation_session_id: "VIO-CAM_001-20260824-103012-a8f31c"
+      },
+      violation: {
+        type: "loitering",
+        timestamp: "2026-08-24T09:42:31.000Z",
+        first_seen: "2026-08-24T09:42:01.000Z",
+        last_seen: "2026-08-24T09:42:31.000Z",
+        finalized_at: "2026-08-24T09:42:41.000Z",
+        fine_amount_rwf: 20000
+      },
+      vehicle: {
+        plate: "RAB123A",
+        plate_detected: true,
+        owner_name: "John Doe",
+        owner_phone: "+25078XXXXXXX",
+        owner_email: "john@example.com",
+        make: "Toyota",
+        model: "RAV4",
+        color: "Dark Grey"
+      },
+      recognition: {
+        status: "recognized",
+        plate_detected: true,
+        plate_confidence: 0.94,
+        ocr_confidence: 0.94,
+        plate_detection_confidence: 0.91,
+        processed_at: "2026-08-24T09:42:38.000Z"
+      },
+      evidence: {
+        snapshot_score: 0.9234,
+        bounding_box: {
+          x1: 720,
+          y1: 621,
+          x2: 1464,
+          y2: 2151
+        }
+      },
+      enforcement: {
+        status: "pending_payment",
+        fine_generated: true,
+        notification_sent: true,
+        payment_status: "pending"
+      }
+    }
+  },
+
+  // 2. POLICE REVIEW CASE (Matching exact prompt schema)
+  {
+    sessionId: 'VIO-CAM_002-20260824-002',
+    timestamp: '2026-08-24T09:45:00.000Z',
+    exceptionReason: 'NO_PLATE_DETECTED',
+    status: 'PENDING_MANUAL_REVIEW',
+    urgencyScore: 5,
+    camera: {
+      cameraId: 'CAM_002',
+      locationName: 'KG 11 Ave - Remera Hub',
+      sector: 'Remera',
+      district: 'Gasabo',
+      province: 'Kigali City',
+      coordinates: { lat: -1.9589, lng: 30.1123 },
+      recordedSpeedKmh: 68,
+      speedLimitKmh: 60,
+      laneNumber: 2,
+      status: 'ONLINE',
+      lastPingTime: '2026-08-24T09:45:15Z',
+    },
+    evidenceSnapshots: {
+      bestSnapshotUrl: createTrafficSnapshotSvg('NO PLATE', '#991b1b', 'Pickup', 68, 60, 'KG 11 Ave - Remera', '09:45:00', true, true),
+      contextSnapshotUrl: createTrafficSnapshotSvg('NO PLATE', '#991b1b', 'Pickup', 68, 60, 'KG 11 Ave - Remera', '09:45:00', false, true),
+      plateCropUrl: createPlateCropSvg('??? ???', '0.0%', true, true),
+    },
+    aiDetection: {
+      suggestedPlate: '',
+      overallConfidence: 0,
+      characterConfidences: [],
+      aiVehicleClass: 'Pickup',
+      aiVehicleColor: 'Red',
+    },
+    registryMatch: {
+      found: false,
+      registrationStatus: 'UNREGISTERED',
+    },
+    realRecord: {
+      violation_id: "VIO-CAM_002-20260824-002",
+      camera_id: "CAM_002",
+      identity: {
+        violation_id: "VIO-CAM_002-20260824-002",
+        violation_session_id: "VIO-CAM_002-20260824-094500-b9e42d"
+      },
+      violation: {
+        type: "line_crossing",
+        timestamp: "2026-08-24T09:45:00.000Z",
+        fine_amount_rwf: 25000
+      },
+      vehicle: {
+        plate: null,
+        plate_detected: false,
+        owner_name: null,
+        owner_phone: null,
+        owner_email: null
+      },
+      recognition: {
+        status: "not_recognized",
+        plate_detected: false,
+        plate_confidence: null,
+        ocr_confidence: null,
+        plate_detection_confidence: null
+      },
+      evidence: {
+        snapshot_score: 0.2100
+      },
+      enforcement: {
+        status: "police_review",
+        fine_generated: false,
+        notification_sent: false,
+        payment_status: "not_generated"
+      }
+    }
+  },
+
+  // 3. Additional Automatic Enforcement Case (Speeding 98% confidence)
+  {
+    sessionId: 'VIO-CAM_003-20260824-003',
+    timestamp: '2026-08-24T09:50:12.000Z',
+    exceptionReason: 'NONE_AUTOMATIC',
+    status: 'AUTOMATIC_ENFORCEMENT',
+    urgencyScore: 2,
+    camera: {
+      cameraId: 'CAM_003',
+      locationName: 'RN4 Expressway - Musanze Toll Gate',
+      sector: 'Muhoza',
+      district: 'Musanze',
+      province: 'Northern Province',
+      coordinates: { lat: -1.5002, lng: 29.6335 },
+      recordedSpeedKmh: 98,
+      speedLimitKmh: 80,
+      laneNumber: 1,
+      status: 'ONLINE',
+      lastPingTime: '2026-08-24T09:51:00Z',
+    },
+    evidenceSnapshots: {
+      bestSnapshotUrl: createTrafficSnapshotSvg('RAC 459 C', '#0f766e', 'SUV', 98, 80, 'RN4 Musanze', '09:50:12'),
+      contextSnapshotUrl: createTrafficSnapshotSvg('RAC 459 C', '#0f766e', 'SUV', 98, 80, 'RN4 Musanze', '09:50:12'),
+      plateCropUrl: createPlateCropSvg('RAC 459 C', '98.0%', false, false),
+    },
+    aiDetection: {
+      suggestedPlate: 'RAC 459 C',
+      overallConfidence: 98.0,
+      characterConfidences: [
+        { char: 'R', confidence: 99 },
+        { char: 'A', confidence: 99 },
+        { char: 'C', confidence: 98 },
+        { char: ' ', confidence: 100 },
+        { char: '4', confidence: 97 },
+        { char: '5', confidence: 98 },
+        { char: '9', confidence: 97 },
+        { char: ' ', confidence: 100 },
+        { char: 'C', confidence: 98 },
+      ],
+      aiVehicleClass: 'SUV',
+      aiVehicleColor: 'Dark Teal',
+    },
+    registryMatch: {
+      found: true,
+      plateNumber: 'RAC 459 C',
+      ownerName: 'Mutesi Divine',
+      ownerPhone: '+250783109444',
+      make: 'TVS',
+      model: 'Apache RTR 160',
+      color: 'Red',
+      registrationStatus: 'ACTIVE',
+    },
+    realRecord: {
+      violation_id: "VIO-CAM_003-20260824-003",
+      camera_id: "CAM_003",
+      identity: {
+        violation_id: "VIO-CAM_003-20260824-003",
+        violation_session_id: "VIO-CAM_003-20260824-095012-c7f91a"
+      },
+      violation: {
+        type: "speeding",
+        timestamp: "2026-08-24T09:50:12.000Z",
+        first_seen: "2026-08-24T09:50:00.000Z",
+        last_seen: "2026-08-24T09:50:12.000Z",
+        finalized_at: "2026-08-24T09:50:20.000Z",
+        fine_amount_rwf: 50000
+      },
+      vehicle: {
+        plate: "RAC 459 C",
+        plate_detected: true,
+        owner_name: "Mutesi Divine",
+        owner_phone: "+250783109444",
+        owner_email: "mutesi@example.com",
+        make: "TVS",
+        model: "Apache RTR 160",
+        color: "Red"
+      },
+      recognition: {
+        status: "recognized",
+        plate_detected: true,
+        plate_confidence: 0.98,
+        ocr_confidence: 0.98,
+        plate_detection_confidence: 0.96,
+        processed_at: "2026-08-24T09:50:15.000Z"
+      },
+      evidence: {
+        snapshot_score: 0.9650,
+        bounding_box: { x1: 650, y1: 580, x2: 1380, y2: 2020 }
+      },
+      enforcement: {
+        status: "pending_payment",
+        fine_generated: true,
+        notification_sent: true,
+        payment_status: "pending"
+      }
+    }
+  },
+
+  // 4. Police Review Case - LOW CONFIDENCE OCR
   {
     sessionId: 'SESS-RW-2026-8801',
     timestamp: '2026-08-24T10:42:15Z',
@@ -207,8 +481,8 @@ export const INITIAL_VIOLATION_SESSIONS: ViolationSession[] = [
         { char: 'A', confidence: 98 },
         { char: 'B', confidence: 95 },
         { char: ' ', confidence: 100 },
-        { char: '8', confidence: 52 }, // Low confidence digit
-        { char: '9', confidence: 48 }, // Low confidence digit (looks like 3 or 9)
+        { char: '8', confidence: 52 },
+        { char: '9', confidence: 48 },
         { char: '2', confidence: 91 },
         { char: ' ', confidence: 100 },
         { char: 'A', confidence: 92 },
@@ -230,43 +504,43 @@ export const INITIAL_VIOLATION_SESSIONS: ViolationSession[] = [
       chassisNumber: 'JT111AB2940294812',
       registrationStatus: 'ACTIVE',
     },
+    realRecord: {
+      violation_id: "SESS-RW-2026-8801",
+      camera_id: "CAM-KGL-04",
+      identity: {
+        violation_id: "SESS-RW-2026-8801",
+        violation_session_id: "SESS-RW-2026-8801-104215"
+      },
+      violation: {
+        type: "speeding",
+        timestamp: "2026-08-24T10:42:15Z",
+        fine_amount_rwf: 25000
+      },
+      vehicle: {
+        plate: "RAB 892 A",
+        plate_detected: true,
+        owner_name: null, // Low confidence -> owner review needed
+        owner_phone: null,
+        owner_email: null
+      },
+      recognition: {
+        status: "low_confidence",
+        plate_detected: true,
+        plate_confidence: 0.684,
+        ocr_confidence: 0.684,
+        plate_detection_confidence: 0.720,
+        processed_at: "2026-08-24T10:42:18Z"
+      },
+      enforcement: {
+        status: "police_review",
+        fine_generated: false,
+        notification_sent: false,
+        payment_status: "not_generated"
+      }
+    }
   },
-  {
-    sessionId: 'SESS-RW-2026-8802',
-    timestamp: '2026-08-24T10:38:00Z',
-    exceptionReason: 'NO_PLATE_DETECTED',
-    status: 'PENDING_MANUAL_REVIEW',
-    urgencyScore: 5,
-    camera: {
-      cameraId: 'CAM-KGL-12',
-      locationName: 'KG 11 Ave - Remera Hub',
-      sector: 'Remera',
-      district: 'Gasabo',
-      province: 'Kigali City',
-      coordinates: { lat: -1.9589, lng: 30.1123 },
-      recordedSpeedKmh: 98,
-      speedLimitKmh: 60,
-      laneNumber: 1,
-      status: 'ONLINE',
-      lastPingTime: '2026-08-24T10:44:30Z',
-    },
-    evidenceSnapshots: {
-      bestSnapshotUrl: createTrafficSnapshotSvg('NO PLATE', '#991b1b', 'Pickup', 98, 60, 'KG 11 Ave - Remera', '10:38:00', true, true),
-      contextSnapshotUrl: createTrafficSnapshotSvg('NO PLATE', '#991b1b', 'Pickup', 98, 60, 'KG 11 Ave - Remera', '10:38:00', false, true),
-      plateCropUrl: createPlateCropSvg('??? ???', '12.0%', true, true),
-    },
-    aiDetection: {
-      suggestedPlate: '',
-      overallConfidence: 12.0,
-      characterConfidences: [],
-      aiVehicleClass: 'Pickup',
-      aiVehicleColor: 'Red',
-    },
-    registryMatch: {
-      found: false,
-      registrationStatus: 'UNREGISTERED',
-    },
-  },
+
+  // 5. Police Review Case - REGISTRY MISMATCH
   {
     sessionId: 'SESS-RW-2026-8803',
     timestamp: '2026-08-24T10:29:40Z',
@@ -317,58 +591,48 @@ export const INITIAL_VIOLATION_SESSIONS: ViolationSession[] = [
       make: 'TVS',
       model: 'Apache RTR 160',
       color: 'Red',
-      bodyType: 'Motorcycle', // Notice mismatch! AI captured an SUV, but plate is registered to a motorcycle!
+      bodyType: 'Motorcycle',
       manufactureYear: 2021,
       chassisNumber: 'MD2A15EB8MW901823',
       registrationStatus: 'STOLEN_ALERT',
     },
+    realRecord: {
+      violation_id: "SESS-RW-2026-8803",
+      camera_id: "CAM-NYB-02",
+      identity: {
+        violation_id: "SESS-RW-2026-8803",
+        violation_session_id: "SESS-RW-2026-8803-102940"
+      },
+      violation: {
+        type: "speeding",
+        timestamp: "2026-08-24T10:29:40Z",
+        fine_amount_rwf: 25000
+      },
+      vehicle: {
+        plate: "RAC 459 C",
+        plate_detected: true,
+        owner_name: null, // Registry mismatch flag
+        owner_phone: null,
+        owner_email: null
+      },
+      recognition: {
+        status: "recognized",
+        plate_detected: true,
+        plate_confidence: 0.962,
+        ocr_confidence: 0.962,
+        plate_detection_confidence: 0.950,
+        processed_at: "2026-08-24T10:29:45Z"
+      },
+      enforcement: {
+        status: "police_review",
+        fine_generated: false,
+        notification_sent: false,
+        payment_status: "not_generated"
+      }
+    }
   },
-  {
-    sessionId: 'SESS-RW-2026-8804',
-    timestamp: '2026-08-24T10:15:10Z',
-    exceptionReason: 'UNREGISTERED_VEHICLE',
-    status: 'PENDING_MANUAL_REVIEW',
-    urgencyScore: 3,
-    camera: {
-      cameraId: 'CAM-MSZ-01',
-      locationName: 'RN4 Expressway - Musanze Toll Gate',
-      sector: 'Muhoza',
-      district: 'Musanze',
-      province: 'Northern Province',
-      coordinates: { lat: -1.5002, lng: 29.6335 },
-      recordedSpeedKmh: 92,
-      speedLimitKmh: 80,
-      laneNumber: 1,
-      status: 'ONLINE',
-      lastPingTime: '2026-08-24T10:40:00Z',
-    },
-    evidenceSnapshots: {
-      bestSnapshotUrl: createTrafficSnapshotSvg('RAE 301 X', '#334155', 'Truck', 92, 80, 'RN4 Musanze', '10:15:10'),
-      contextSnapshotUrl: createTrafficSnapshotSvg('RAE 301 X', '#334155', 'Truck', 92, 80, 'RN4 Musanze', '10:15:10'),
-      plateCropUrl: createPlateCropSvg('RAE 301 X', '94.8%', false, false),
-    },
-    aiDetection: {
-      suggestedPlate: 'RAE 301 X',
-      overallConfidence: 94.8,
-      characterConfidences: [
-        { char: 'R', confidence: 99 },
-        { char: 'A', confidence: 98 },
-        { char: 'E', confidence: 94 },
-        { char: ' ', confidence: 100 },
-        { char: '3', confidence: 95 },
-        { char: '0', confidence: 93 },
-        { char: '1', confidence: 96 },
-        { char: ' ', confidence: 100 },
-        { char: 'X', confidence: 92 },
-      ],
-      aiVehicleClass: 'Heavy Truck',
-      aiVehicleColor: 'Grey',
-    },
-    registryMatch: {
-      found: false,
-      registrationStatus: 'UNREGISTERED',
-    },
-  },
+
+  // 6. Approved Officer Review Record
   {
     sessionId: 'SESS-RW-2026-8805',
     timestamp: '2026-08-24T09:55:00Z',
@@ -433,60 +697,43 @@ export const INITIAL_VIOLATION_SESSIONS: ViolationSession[] = [
       fineAmountRwf: 25000,
       notes: 'Plate clearly reads RAD 110 B despite glare on character D.',
     },
-  },
-  {
-    sessionId: 'SESS-RW-2026-8806',
-    timestamp: '2026-08-24T09:20:45Z',
-    exceptionReason: 'NO_PLATE_DETECTED',
-    status: 'REJECTED_DISMISSED',
-    urgencyScore: 1,
-    camera: {
-      cameraId: 'CAM-HYE-01',
-      locationName: 'Huye University Avenue - RN2',
-      sector: 'Ngoma',
-      district: 'Huye',
-      province: 'Southern Province',
-      coordinates: { lat: -2.5967, lng: 29.7394 },
-      recordedSpeedKmh: 54,
-      speedLimitKmh: 50,
-      laneNumber: 1,
-      status: 'ONLINE',
-      lastPingTime: '2026-08-24T10:40:00Z',
-    },
-    evidenceSnapshots: {
-      bestSnapshotUrl: createTrafficSnapshotSvg('RDF 001', '#ffffff', 'Ambulance', 54, 50, 'Huye Univ Ave', '09:20:45'),
-      contextSnapshotUrl: createTrafficSnapshotSvg('RDF 001', '#ffffff', 'Ambulance', 54, 50, 'Huye Univ Ave', '09:20:45'),
-      plateCropUrl: createPlateCropSvg('RDF 001', '35.0%', false, false),
-    },
-    aiDetection: {
-      suggestedPlate: '',
-      overallConfidence: 35.0,
-      characterConfidences: [],
-      aiVehicleClass: 'Special Emergency Vehicle',
-      aiVehicleColor: 'White',
-    },
-    registryMatch: {
-      found: true,
-      plateNumber: 'RDF 902 A',
-      ownerName: 'SAMU Emergency Medical Services Rwanda',
-      make: 'Toyota',
-      model: 'Land Cruiser Ambulance',
-      color: 'White',
-      bodyType: 'Van / Special',
-      registrationStatus: 'ACTIVE',
-    },
-    officerReview: {
-      reviewedByOfficerId: 'TRP-8842',
-      reviewedByOfficerName: 'Capt. E. Habimana',
-      reviewedAt: '2026-08-24T09:25:30Z',
-      originalAiPlate: '',
-      correctedPlate: 'RDF 902 A',
-      violationType: 'SPEEDING',
-      fineAmountRwf: 0,
-      rejectionReason: 'Emergency Vehicle responding to code 3 dispatch.',
-    },
-  },
+    realRecord: {
+      violation_id: "SESS-RW-2026-8805",
+      camera_id: "CAM-KGL-04",
+      identity: {
+        violation_id: "SESS-RW-2026-8805",
+        violation_session_id: "SESS-RW-2026-8805-095500"
+      },
+      violation: {
+        type: "speeding",
+        timestamp: "2026-08-24T09:55:00Z",
+        fine_amount_rwf: 25000
+      },
+      vehicle: {
+        plate: "RAD 110 B",
+        plate_detected: true,
+        owner_name: "Claire Mugisha",
+        owner_phone: "+250 788 112 334",
+        owner_email: "claire@example.com"
+      },
+      recognition: {
+        status: "recognized",
+        plate_detected: true,
+        plate_confidence: 0.71,
+        ocr_confidence: 0.71,
+        plate_detection_confidence: 0.75,
+        processed_at: "2026-08-24T09:55:05Z"
+      },
+      enforcement: {
+        status: "approved",
+        fine_generated: true,
+        notification_sent: true,
+        payment_status: "pending"
+      }
+    }
+  }
 ];
+
 
 export const MOCK_OFFICER: OfficerProfile = {
   officerId: 'TRP-8842',

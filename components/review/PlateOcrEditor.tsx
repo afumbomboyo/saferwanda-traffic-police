@@ -43,6 +43,12 @@ export const PlateOcrEditor: React.FC<PlateOcrEditorProps> = ({
           desc: 'Plate string not found in national motor registry.',
           color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/80',
         };
+      default:
+        return {
+          title: 'EXCEPTION REVIEW',
+          desc: 'Event flagged for officer verification.',
+          color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/80',
+        };
     }
   };
 

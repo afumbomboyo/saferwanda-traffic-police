@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useReviewQueue } from '../../lib/context/ReviewQueueContext';
+import { useAuth } from '../../lib/context/AuthContext';
+import { OfficerBiometricModal } from '../auth/OfficerBiometricModal';
 import { 
   Shield, 
   AlertTriangle, 
@@ -17,7 +19,10 @@ import {
   AlertOctagon,
   FileText,
   Camera,
-  UserCheck
+  UserCheck,
+  Fingerprint,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -27,9 +32,12 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ darkMode, setDarkMode }) => {
   const pathname = usePathname();
-  const { stats, officer, searchQuery, setSearchQuery, resetMockData } = useReviewQueue();
+  const { stats, searchQuery, setSearchQuery, resetMockData } = useReviewQueue();
+  const { isAuthenticated, officer, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isBiometricModalOpen, setIsBiometricModalOpen] = useState(false);
+
 
   const navItems = [
     { name: 'Overview', href: '/', icon: LayoutDashboard, badge: null },
@@ -136,22 +144,33 @@ export const Navbar: React.FC<NavbarProps> = ({ darkMode, setDarkMode }) => {
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
 
-            {/* Officer Profile Badge */}
+            {/* Officer Duty Authentication & Profile Badge */}
             <div className="flex items-center space-x-2.5 pl-2 border-l border-slate-200 dark:border-slate-800">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-slate-950 text-amber-400 flex items-center justify-center font-black text-[10px] border-2 border-sky-500 shadow-inner">
-                  {officer.badgeNumber.substring(0, 2)}
+              <button
+                onClick={() => setIsBiometricModalOpen(true)}
+                title={isAuthenticated ? 'Firebase Auth Verified (Click to re-authenticate)' : 'Click to perform Police Duty Biometric Login'}
+                className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-xl border transition-all ${
+                  isAuthenticated
+                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30 animate-pulse'
+                }`}
+              >
+                <div className="relative">
+                  <div className="w-7 h-7 rounded-full bg-slate-950 text-amber-400 flex items-center justify-center font-black text-[10px] border border-sky-500 shadow-inner">
+                    {isAuthenticated ? <ShieldCheck className="w-4 h-4 text-emerald-400" /> : <Fingerprint className="w-4 h-4 text-amber-400" />}
+                  </div>
+                  <span className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${isAuthenticated ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 </div>
-                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-slate-900"></span>
-              </div>
-              <div className="hidden lg:block text-left">
-                <p className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none">
-                  {officer.name}
-                </p>
-                <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                  {officer.rank}
-                </p>
-              </div>
+                
+                <div className="hidden lg:block text-left">
+                  <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 leading-none">
+                    {isAuthenticated ? officer.name : 'Duty Login Required'}
+                  </p>
+                  <p className="text-[9px] font-mono text-slate-400 mt-0.5">
+                    {isAuthenticated ? 'FIREBASE AUTH ACTIVE' : 'TOUCH TO AUTHENTICATE'}
+                  </p>
+                </div>
+              </button>
             </div>
 
             {/* Mobile Menu Toggle Button */}
@@ -243,6 +262,13 @@ export const Navbar: React.FC<NavbarProps> = ({ darkMode, setDarkMode }) => {
           );
         })}
       </div>
+
+      {/* Officer Biometric Multi-Step Duty Login Modal */}
+      <OfficerBiometricModal
+        isOpen={isBiometricModalOpen}
+        onClose={() => setIsBiometricModalOpen(false)}
+      />
     </>
   );
 };
+
