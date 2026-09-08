@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useReviewQueue } from '../../lib/context/ReviewQueueContext';
 import { useAuth } from '../../lib/context/AuthContext';
 import { OfficerBiometricModal } from '../../components/auth/OfficerBiometricModal';
-import { Shield, MapPin, Award, Fingerprint, ShieldCheck, KeyRound, LogOut, CheckCircle2 } from 'lucide-react';
+import { Shield, MapPin, Award, ScanFace, ShieldCheck, KeyRound, LogOut, CheckCircle2 } from 'lucide-react';
 
 export default function OfficerProfilePage() {
   const { officer } = useReviewQueue();
@@ -50,8 +50,8 @@ export default function OfficerProfilePage() {
               onClick={() => setIsModalOpen(true)}
               className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition-colors flex items-center justify-center gap-2 shadow-md"
             >
-              <Fingerprint className="w-4 h-4" />
-              <span>Biometric Duty Login</span>
+              <ScanFace className="w-4 h-4" />
+              <span>Face + PIN Duty Login</span>
             </button>
 
             {isAuthenticated && (

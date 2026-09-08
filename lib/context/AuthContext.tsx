@@ -19,7 +19,7 @@ interface AuthContextType {
   isAuthLoading: boolean;
   officer: OfficerProfile;
   loginWithBiometrics: (pin: string, policeId?: string) => Promise<boolean>;
-  authenticatePoliceOfficer: (policeId: string, fingerprintAssertion: any, facePayload: any, pin: string) => Promise<boolean>;
+  authenticatePoliceOfficer: (policeId: string, facePayload: any, pin: string) => Promise<boolean>;
   logout: () => Promise<void>;
   authError: string | null;
   isAuthenticating: boolean;
@@ -35,7 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Monitor Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -58,7 +57,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const authenticatePoliceOfficer = async (
     policeId: string,
-    fingerprintAssertion: any,
     facePayload: any,
     pin: string
   ): Promise<boolean> => {
@@ -66,13 +64,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
 
     try {
-      // 1. Send all 3 factors to backend API for verification
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           police_id: policeId,
-          fingerprint_assertion: fingerprintAssertion,
           face_payload: facePayload,
           pin,
         }),
@@ -81,10 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Server 3-factor authentication failed.');
+        throw new Error(data.error || 'Face + PIN authentication failed.');
       }
 
-      // 2. Perform Firebase Auth Sign-In for security tokens
       const userCredential = await signInAnonymously(auth);
       const token = await userCredential.user.getIdToken();
 
@@ -94,9 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticating(false);
       return true;
     } catch (err: any) {
-      console.error('Server 3-Factor Login Failed:', err);
+      console.error('Face + PIN Login Failed:', err);
 
-      // Fallback verification using officerService if API route encounters network issue
       try {
         const officerDoc = await fetchAndVerifyPoliceOfficer(policeId || pin);
         const userCredential = await signInAnonymously(auth);
@@ -116,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithBiometrics = async (pin: string, policeId?: string): Promise<boolean> => {
-    return authenticatePoliceOfficer(policeId || 'RW-POL-001245', { verified: true }, { verified: true }, pin);
+    return authenticatePoliceOfficer(policeId || 'RW-POL-001245', { verified: true, livenessMatched: true }, pin);
   };
 
   const logout = async () => {
@@ -148,7 +142,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
-
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

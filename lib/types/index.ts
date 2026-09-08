@@ -160,7 +160,7 @@ export interface ViolationSession {
 
 export interface PoliceOfficerEnrollment {
   completed: boolean;
-  fingerprint: {
+  fingerprint?: {
     enrolled: boolean;
     credential_id?: string;
   };

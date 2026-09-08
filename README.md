@@ -34,3 +34,28 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+### Environment variables
+
+The browser Firebase client in `lib/firebase/config.ts` requires these variables to keep their `NEXT_PUBLIC_` names in Vercel for **Production**, **Preview**, and **Development**:
+
+```text
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
+```
+
+These are Firebase web configuration values, not server secrets. Renaming them to private variables makes them unavailable to client components and causes `auth/invalid-api-key` during the build.
+
+Keep these server-only values private and do not rename them to `NEXT_PUBLIC_`:
+
+```text
+FIREBASE_SERVICE_ACCOUNT_JSON
+FACE_PROVIDER_API_KEY
+FACE_PROVIDER_SECRET
+```
+
+After changing Vercel environment variables, redeploy so Next.js rebuilds the browser bundle with the public Firebase configuration.

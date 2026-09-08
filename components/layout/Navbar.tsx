@@ -20,7 +20,7 @@ import {
   FileText,
   Camera,
   UserCheck,
-  Fingerprint,
+  ScanFace,
   Lock,
   ShieldCheck
 } from 'lucide-react';
@@ -157,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({ darkMode, setDarkMode }) => {
               >
                 <div className="relative">
                   <div className="w-7 h-7 rounded-full bg-slate-950 text-amber-400 flex items-center justify-center font-black text-[10px] border border-sky-500 shadow-inner">
-                    {isAuthenticated ? <ShieldCheck className="w-4 h-4 text-emerald-400" /> : <Fingerprint className="w-4 h-4 text-amber-400" />}
+                    {isAuthenticated ? <ShieldCheck className="w-4 h-4 text-emerald-400" /> : <ScanFace className="w-4 h-4 text-amber-400" />}
                   </div>
                   <span className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${isAuthenticated ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 </div>

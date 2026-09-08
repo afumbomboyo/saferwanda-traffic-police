@@ -24,10 +24,6 @@ export const INITIAL_POLICE_OFFICER_DOC: PoliceOfficerDoc = {
   status: 'active',
   enrollment: {
     completed: true,
-    fingerprint: {
-      enrolled: true,
-      credential_id: 'webauthn_cred_rw_pol_001245'
-    },
     face: {
       enrolled: true,
       reference_id: 'face_ref_rw_pol_001245'
@@ -95,10 +91,6 @@ export async function fetchAndVerifyPoliceOfficer(identifier: string): Promise<P
     // Check Enrollment Eligibility (Must be completed)
     if (!officerDoc.enrollment || !officerDoc.enrollment.completed) {
       throw new Error('Officer enrollment is incomplete. Authentication is denied.');
-    }
-
-    if (!officerDoc.enrollment.fingerprint?.enrolled) {
-      throw new Error('Officer fingerprint factor is not enrolled.');
     }
 
     if (!officerDoc.enrollment.face?.enrolled) {
