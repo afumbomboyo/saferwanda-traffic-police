@@ -1,153 +1,333 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  signInAnonymously, 
-  onAuthStateChanged, 
-  signOut, 
-  User 
-} from 'firebase/auth';
-import { auth } from '../firebase/config';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+
 import { OfficerProfile } from '../types';
-import { MOCK_OFFICER } from '../data/mockData';
-import { fetchAndVerifyPoliceOfficer, mapPoliceOfficerToProfile } from '../services/officerService';
+
+interface PoliceSessionResponse {
+  success: boolean;
+  authenticated: boolean;
+  officer?: OfficerProfile;
+  session?: {
+    police_id: string;
+    service_number?: string;
+    name?: string;
+    rank?: string;
+    station?: string;
+    department?: string;
+    role?: string;
+    authenticated_at?: string;
+    expires_at?: string;
+  };
+  error?: string;
+}
 
 interface AuthContextType {
-  user: User | null;
-  idToken: string | null;
+  user: null;
+  idToken: null;
+
   isAuthenticated: boolean;
   isAuthLoading: boolean;
-  officer: OfficerProfile;
-  loginWithBiometrics: (pin: string, policeId?: string) => Promise<boolean>;
-  authenticatePoliceOfficer: (policeId: string, facePayload: any, pin: string) => Promise<boolean>;
+
+  officer: OfficerProfile | null;
+
+  loginWithBiometrics: (
+    pin: string,
+    policeId?: string
+  ) => Promise<boolean>;
+
+  authenticatePoliceOfficer: (
+    policeId: string,
+    pin: string,
+    livenessAuthorizationId: string
+  ) => Promise<boolean>;
+
   logout: () => Promise<void>;
+
   authError: string | null;
   isAuthenticating: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext =
+  createContext<AuthContextType | undefined>(
+    undefined
+  );
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [idToken, setIdToken] = useState<string | null>(null);
-  const [officer, setOfficer] = useState<OfficerProfile>(MOCK_OFFICER);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
+  const [officer, setOfficer] =
+    useState<OfficerProfile | null>(null);
+
+  const [isAuthenticated, setIsAuthenticated] =
+    useState(false);
+
+  const [isAuthLoading, setIsAuthLoading] =
+    useState(true);
+
+  const [isAuthenticating, setIsAuthenticating] =
+    useState(false);
+
+  const [authError, setAuthError] =
+    useState<string | null>(null);
+
+  // ------------------------------------------------------------
+  // Restore existing server-side police session
+  // ------------------------------------------------------------
+
+  const restoreSession = async () => {
+    try {
+      setIsAuthLoading(true);
+
+      const response = await fetch(
+        '/api/auth/session',
+        {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        }
+      );
+
+      const data: PoliceSessionResponse =
+        await response.json().catch(() => ({
+          success: false,
+          authenticated: false,
+        }));
+
+      if (
+        response.ok &&
+        data.success &&
+        data.authenticated &&
+        data.officer
+      ) {
+        setOfficer(data.officer);
+        setIsAuthenticated(true);
+        setAuthError(null);
+      } else {
+        setOfficer(null);
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error(
+        'Unable to restore police duty session:',
+        error
+      );
+
+      setOfficer(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // ------------------------------------------------------------
+  // Restore session when application starts
+  // ------------------------------------------------------------
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        try {
-          const token = await currentUser.getIdToken();
-          setIdToken(token);
-        } catch (e) {
-          console.warn('Failed to retrieve ID token:', e);
-        }
-      } else {
-        setUser(null);
-        setIdToken(null);
-      }
-      setIsAuthLoading(false);
-    });
-
-    return () => unsubscribe();
+    restoreSession();
   }, []);
+
+  // ------------------------------------------------------------
+  // Real police authentication
+  // ------------------------------------------------------------
 
   const authenticatePoliceOfficer = async (
     policeId: string,
-    facePayload: any,
-    pin: string
+    pin: string,
+    livenessAuthorizationId: string
   ): Promise<boolean> => {
     setIsAuthenticating(true);
     setAuthError(null);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          police_id: policeId,
-          face_payload: facePayload,
-          pin,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Face + PIN authentication failed.');
+      if (!policeId.trim()) {
+        throw new Error(
+          'Police ID is required.'
+        );
       }
 
-      const userCredential = await signInAnonymously(auth);
-      const token = await userCredential.user.getIdToken();
+      if (!pin || pin.length !== 6) {
+        throw new Error(
+          'A valid 6-digit Officer Security PIN is required.'
+        );
+      }
 
-      setUser(userCredential.user);
-      setIdToken(token);
+      if (!livenessAuthorizationId) {
+        throw new Error(
+          'Facial liveness authorization is required.'
+        );
+      }
+
+      const response = await fetch(
+        '/api/auth/login',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          cache: 'no-store',
+          body: JSON.stringify({
+            police_id: policeId.trim(),
+            pin,
+            liveness_authorization_id:
+              livenessAuthorizationId,
+          }),
+        }
+      );
+
+      const data = await response
+        .json()
+        .catch(() => null);
+
+      if (
+        !response.ok ||
+        !data?.success ||
+        !data?.officer
+      ) {
+        throw new Error(
+          data?.error ||
+          'Police duty authentication failed.'
+        );
+      }
+
+      /*
+       * The server has now:
+       *
+       * 1. Verified the officer.
+       * 2. Verified liveness authorization.
+       * 3. Verified the live face.
+       * 4. Verified the Argon2id PIN.
+       * 5. Consumed the liveness authorization.
+       * 6. Created the HTTP-only police duty session.
+       *
+       * The browser only receives the officer profile.
+       */
+
       setOfficer(data.officer);
-      setIsAuthenticating(false);
+      setIsAuthenticated(true);
+      setAuthError(null);
+
       return true;
-    } catch (err: any) {
-      console.error('Face + PIN Login Failed:', err);
+    } catch (error: any) {
+      console.error(
+        'Police duty authentication failed:',
+        error
+      );
 
-      try {
-        const officerDoc = await fetchAndVerifyPoliceOfficer(policeId || pin);
-        const userCredential = await signInAnonymously(auth);
-        const token = await userCredential.user.getIdToken();
+      setOfficer(null);
+      setIsAuthenticated(false);
 
-        setUser(userCredential.user);
-        setIdToken(token);
-        setOfficer(mapPoliceOfficerToProfile(officerDoc));
-        setIsAuthenticating(false);
-        return true;
-      } catch (fallbackErr: any) {
-        setAuthError(err.message || fallbackErr.message || 'Police Duty Authentication Failed.');
-        setIsAuthenticating(false);
-        return false;
-      }
+      const message =
+        error?.message ||
+        'Police duty authentication failed.';
+
+      setAuthError(message);
+
+      return false;
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
-  const loginWithBiometrics = async (pin: string, policeId?: string): Promise<boolean> => {
-    return authenticatePoliceOfficer(policeId || 'RW-POL-001245', { verified: true, livenessMatched: true }, pin);
+  // ------------------------------------------------------------
+  // Re-authentication / biometric modal
+  // ------------------------------------------------------------
+
+  /*
+   * This function is intentionally NOT allowed to bypass
+   * the real authentication flow.
+   *
+   * The biometric modal will need to be updated to perform
+   * the same challenge -> liveness -> login process.
+   *
+   * Until then, this function refuses the old shortcut.
+   */
+  const loginWithBiometrics = async (
+    _pin: string,
+    _policeId?: string
+  ): Promise<boolean> => {
+    setAuthError(
+      'Biometric re-authentication must complete a live facial liveness check before authentication.'
+    );
+
+    return false;
   };
 
-  const logout = async () => {
+  // ------------------------------------------------------------
+  // Logout
+  // ------------------------------------------------------------
+
+  const logout = async (): Promise<void> => {
+    setAuthError(null);
+
     try {
-      await signOut(auth);
-      setUser(null);
-      setIdToken(null);
-    } catch (err) {
-      console.error('Error signing out:', err);
+      await fetch(
+        '/api/auth/logout',
+        {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+        }
+      );
+    } catch (error) {
+      console.error(
+        'Police duty session logout request failed:',
+        error
+      );
+    } finally {
+      setOfficer(null);
+      setIsAuthenticated(false);
     }
+  };
+
+  const value: AuthContextType = {
+    /*
+     * These are intentionally null.
+     *
+     * Police authentication is no longer represented by
+     * anonymous Firebase authentication.
+     */
+    user: null,
+    idToken: null,
+
+    isAuthenticated,
+    isAuthLoading,
+
+    officer,
+
+    loginWithBiometrics,
+
+    authenticatePoliceOfficer,
+
+    logout,
+
+    authError,
+    isAuthenticating,
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        idToken,
-        isAuthenticated: Boolean(user),
-        isAuthLoading,
-        officer,
-        loginWithBiometrics,
-        authenticatePoliceOfficer,
-        logout,
-        authError,
-        isAuthenticating,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
+
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error(
+      'useAuth must be used within an AuthProvider'
+    );
   }
+
   return context;
 };
-
