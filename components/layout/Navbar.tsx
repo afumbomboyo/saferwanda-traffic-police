@@ -164,10 +164,10 @@ export const Navbar: React.FC<NavbarProps> = ({ darkMode, setDarkMode }) => {
                 
                 <div className="hidden lg:block text-left">
                   <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 leading-none">
-                    {isAuthenticated ? officer.name : 'Duty Login Required'}
+                    {isAuthenticated && officer ? officer.name : 'Duty Login Required'}
                   </p>
                   <p className="text-[9px] font-mono text-slate-400 mt-0.5">
-                    {isAuthenticated ? 'FIREBASE AUTH ACTIVE' : 'TOUCH TO AUTHENTICATE'}
+                    {isAuthenticated ? 'SESSION ACTIVE' : 'TOUCH TO AUTHENTICATE'}
                   </p>
                 </div>
               </button>

@@ -114,9 +114,10 @@ export default function OfficerProfilePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-            <span className="text-slate-400 font-bold text-[10px] block uppercase">Firebase Auth UID</span>
+            {/* Server-side session status */}
+            <span className="text-slate-400 font-bold text-[10px] block uppercase">Police Session</span>
             <p className="text-slate-900 dark:text-slate-200 truncate font-semibold">
-              {user ? user.uid : 'No active Firebase Auth session'}
+              {isAuthenticated ? 'Active Session' : 'No active session'}
             </p>
           </div>
 
