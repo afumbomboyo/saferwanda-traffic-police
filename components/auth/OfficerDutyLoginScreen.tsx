@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useRef, useState } from 'react';
 import { useAuth } from '../../lib/context/AuthContext';
@@ -67,6 +67,9 @@ export const OfficerDutyLoginScreen: React.FC = () => {
   const [livenessAuthorizationId, setLivenessAuthorizationId] =
     useState<string | null>(null);
 
+  const [faceImage, setFaceImage] =
+    useState<string | null>(null);
+
   const videoRef =
     useRef<HTMLVideoElement | null>(null);
 
@@ -109,6 +112,7 @@ export const OfficerDutyLoginScreen: React.FC = () => {
     setFacialError(null);
     setFaceChallenge(null);
     setLivenessAuthorizationId(null);
+    setFaceImage(null);
     setFacialProgress(0);
     setPin('');
     setPinError(null);
@@ -178,6 +182,7 @@ export const OfficerDutyLoginScreen: React.FC = () => {
     setFacialVerified(false);
     setFaceChallenge(null);
     setLivenessAuthorizationId(null);
+    setFaceImage(null);
 
     try {
       // --------------------------------------------------------
@@ -436,6 +441,33 @@ export const OfficerDutyLoginScreen: React.FC = () => {
         );
       }
 
+      const fileToDataUrl = (file: File): Promise<string> =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              resolve(reader.result);
+            } else {
+              reject(
+                new Error('Unable to read facial verification image.')
+              );
+            }
+          };
+
+          reader.onerror = () =>
+            reject(
+              new Error('Unable to read facial verification image.')
+            );
+
+          reader.readAsDataURL(file);
+        });
+
+      const finalFaceImage =
+        await fileToDataUrl(frames[frames.length - 1]);
+
+      setFaceImage(finalFaceImage);
+
       // --------------------------------------------------------
       // 6. Receive server-generated authorization
       // --------------------------------------------------------
@@ -469,6 +501,7 @@ export const OfficerDutyLoginScreen: React.FC = () => {
 
       setFacialVerified(false);
       setLivenessAuthorizationId(null);
+      setFaceImage(null);
 
       setFacialError(
         error?.message ||
@@ -539,6 +572,14 @@ export const OfficerDutyLoginScreen: React.FC = () => {
       return;
     }
 
+    if (!faceImage) {
+      setPinError(
+        'Facial verification image is missing. Please complete the facial scan again.'
+      );
+      setStep('FACIAL_SCAN');
+      return;
+    }
+
     setPinError(null);
 
     try {
@@ -547,6 +588,7 @@ export const OfficerDutyLoginScreen: React.FC = () => {
        *
        * police_id
        * pin
+       * face_image
        * liveness_authorization_id
        *
        * to /api/auth/login.
@@ -555,7 +597,8 @@ export const OfficerDutyLoginScreen: React.FC = () => {
         await authenticatePoliceOfficer(
           policeId,
           pin,
-          livenessAuthorizationId
+          livenessAuthorizationId,
+          faceImage || ''
         );
 
       if (success) {

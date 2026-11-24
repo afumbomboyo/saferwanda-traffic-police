@@ -45,8 +45,10 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
 
   // Auto calculate recommended fine based on speed or violation
   useEffect(() => {
-    if (session.camera.recordedSpeedKmh > session.camera.speedLimitKmh) {
-      const delta = session.camera.recordedSpeedKmh - session.camera.speedLimitKmh;
+    const recSpeed = session.camera.recordedSpeedKmh ?? 0;
+    const limitSpeed = session.camera.speedLimitKmh ?? 60;
+    if (recSpeed > limitSpeed) {
+      const delta = recSpeed - limitSpeed;
       if (delta > 30) {
         setFineRwf(50000);
       } else if (delta > 15) {

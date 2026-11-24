@@ -27,18 +27,35 @@ export interface CharacterConfidence {
   confidence: number; // 0 - 100
 }
 
+export interface CameraServicesMap {
+  traffic_enforcement?: boolean;
+  live_stream?: boolean;
+  information_storage?: boolean;
+  abnormal_activity_alert?: boolean;
+  information_retrieval?: boolean;
+}
+
 export interface CameraMetadata {
   cameraId: string;
+  name?: string;
   locationName: string;
   sector: string;
   district: string;
-  province: 'Kigali City' | 'Northern Province' | 'Southern Province' | 'Eastern Province' | 'Western Province';
+  city?: string;
+  province: string;
   coordinates: { lat: number; lng: number };
+  organization?: string;
+  allowedEvents?: string[];
+  webhookUrl?: string;
+  trafficEnforcement?: boolean;
+  liveStream?: boolean;
+  services?: CameraServicesMap;
   recordedSpeedKmh: number;
   speedLimitKmh: number;
   laneNumber: number;
-  status: 'ONLINE' | 'DEGRADED' | 'OFFLINE';
+  status: 'ONLINE' | 'DEGRADED' | 'OFFLINE' | string;
   lastPingTime: string;
+  rawDoc?: any;
 }
 
 export interface VehicleRegistryMatch {

@@ -44,7 +44,8 @@ interface AuthContextType {
   authenticatePoliceOfficer: (
     policeId: string,
     pin: string,
-    livenessAuthorizationId: string
+    livenessAuthorizationId: string,
+    faceImage: string
   ) => Promise<boolean>;
 
   logout: () => Promise<void>;
@@ -140,8 +141,19 @@ export const AuthProvider: React.FC<{
   const authenticatePoliceOfficer = async (
     policeId: string,
     pin: string,
-    livenessAuthorizationId: string
+    livenessAuthorizationId: string,
+    faceImage: string
   ): Promise<boolean> => {
+    console.log(
+      '========== AUTHENTICATE POLICE OFFICER CALLED =========='
+    );
+
+    console.log({
+      policeId,
+      pinLength: pin?.length,
+      livenessAuthorizationId,
+    });
+
     setIsAuthenticating(true);
     setAuthError(null);
 
@@ -164,6 +176,16 @@ export const AuthProvider: React.FC<{
         );
       }
 
+      if (!faceImage) {
+        throw new Error(
+          'Facial verification image is required.'
+        );
+      }
+
+      console.log(
+        '========== ABOUT TO CALL /api/auth/login =========='
+      );
+
       const response = await fetch(
         '/api/auth/login',
         {
@@ -176,6 +198,7 @@ export const AuthProvider: React.FC<{
           body: JSON.stringify({
             police_id: policeId.trim(),
             pin,
+            face_image: faceImage,
             liveness_authorization_id:
               livenessAuthorizationId,
           }),

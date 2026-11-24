@@ -67,6 +67,14 @@ export async function POST(request: Request) {
 
     const officerRecord = officerSnapshot.docs[0].data();
 
+    console.log('POLICE LIVENESS DEBUG:', {
+      policeId,
+      documentId: officerSnapshot.docs[0].id,
+      status: officerRecord.status,
+      face: officerRecord.enrollment?.face,
+      faceEnrolled: officerRecord.enrollment?.face?.enrolled,
+    });
+
     const officerStatus = officerRecord.status;
 
     if (
@@ -82,7 +90,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (officerRecord.face?.enrolled !== true) {
+    if (officerRecord.enrollment?.face?.enrolled !== true) {
       return NextResponse.json(
         {
           success: false,

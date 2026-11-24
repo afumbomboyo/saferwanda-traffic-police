@@ -13,7 +13,7 @@ const ProtectedDashboardContent: React.FC<{
   setDarkMode: (val: boolean | ((prev: boolean) => boolean)) => void;
   children: React.ReactNode;
 }> = ({ darkMode, setDarkMode, children }) => {
-  const { isAuthenticated, isAuthLoading } = useAuth();
+  const { isAuthenticated, isAuthLoading, officer } = useAuth();
 
   if (isAuthLoading) {
     return (
@@ -31,7 +31,7 @@ const ProtectedDashboardContent: React.FC<{
   }
 
   // If officer is not logged in, DO NOT display dashboard layout at all. Show Duty Login Portal.
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !officer) {
     return <OfficerDutyLoginScreen />;
   }
 

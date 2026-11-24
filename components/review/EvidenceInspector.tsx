@@ -48,8 +48,10 @@ export const EvidenceInspector: React.FC<EvidenceInspectorProps> = ({ session })
     }
   };
 
-  const isSpeeding = session.camera.recordedSpeedKmh > session.camera.speedLimitKmh;
-  const speedDelta = session.camera.recordedSpeedKmh - session.camera.speedLimitKmh;
+  const recSpeed = session.camera.recordedSpeedKmh ?? 0;
+  const limitSpeed = session.camera.speedLimitKmh ?? 60;
+  const isSpeeding = recSpeed > limitSpeed;
+  const speedDelta = recSpeed - limitSpeed;
 
   return (
     <div className="flex flex-col h-full bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">

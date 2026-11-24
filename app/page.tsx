@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useReviewQueue } from '../lib/context/ReviewQueueContext';
 import { 
@@ -12,17 +12,26 @@ import {
   Camera, 
   AlertOctagon,
   ShieldCheck,
-  Smartphone
+  Smartphone,
+  Shield
 } from 'lucide-react';
-import { MOCK_CAMERAS } from '../lib/data/mockData';
+import { subscribeToFirestoreCameras } from '../lib/services/camerasService';
 import { ArchitectureFlowDiagram } from '../components/dashboard/ArchitectureFlowDiagram';
 import { AutomaticEnforcementCard } from '../components/dashboard/AutomaticEnforcementCard';
 import { ViolationRecordModal } from '../components/dashboard/ViolationRecordModal';
-import { ViolationSession } from '../lib/types';
+import { ViolationSession, CameraMetadata } from '../lib/types';
 
 export default function OverviewDashboardPage() {
   const { stats, sessions, selectSession } = useReviewQueue();
   const [selectedInspectionSession, setSelectedInspectionSession] = useState<ViolationSession | null>(null);
+  const [cameras, setCameras] = useState<CameraMetadata[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToFirestoreCameras((firestoreCameras) => {
+      setCameras(firestoreCameras || []);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Separate sessions based on established architecture:
   // 1. Automatic Enforcement: owner found -> automatic SMS fine generated
@@ -313,34 +322,38 @@ export default function OverviewDashboardPage() {
           </div>
 
           <div className="space-y-2.5">
-            {MOCK_CAMERAS.map((cam) => (
-              <div
-                key={cam.cameraId}
-                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/60 flex items-center justify-between text-xs"
-              >
-                <div>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 block">
-                    {cam.locationName}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    ID: {cam.cameraId} • Limit: {cam.speedLimitKmh} km/h
-                  </span>
-                </div>
+            {cameras.length === 0 ? (
+              <p className="text-xs text-slate-400 font-mono text-center py-4">
+                No active traffic enforcement camera nodes found.
+              </p>
+            ) : (
+              cameras.map((cam) => (
+                <div
+                  key={cam.cameraId}
+                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/60 flex items-center justify-between text-xs"
+                >
+                  <div>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                      {cam.name || cam.locationName}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      ID: {cam.cameraId} • {cam.district}, {cam.city}
+                    </span>
+                  </div>
 
-                <div className="text-right">
-                  <span
-                    className={`inline-block px-2 py-0.5 text-[10px] font-extrabold rounded ${
-                      cam.status === 'ONLINE'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                    }`}
-                  >
-                    {cam.status}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">{cam.lastPingTime}</span>
+                  <div className="text-right">
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-500/30">
+                      Enforcement Active
+                    </span>
+                    {cam.organization && (
+                      <span className="text-[10px] text-slate-400 block mt-0.5 truncate max-w-[120px]">
+                        {cam.organization}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

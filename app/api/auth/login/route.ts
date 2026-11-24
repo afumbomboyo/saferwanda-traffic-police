@@ -89,6 +89,8 @@ function getOfficerProfile(officerRecord: any) {
 }
 
 export async function POST(request: Request) {
+  console.log('========== POLICE LOGIN ROUTE HIT ==========');
+
   try {
     /*
      * ------------------------------------------------------------
@@ -182,7 +184,7 @@ export async function POST(request: Request) {
     if (officerSnapshot.empty) {
       officerSnapshot = await adminDb
         .collection('police_officers')
-        .where('service_number', '==', policeId)
+        .where('identity.service_number', '==', policeId)
         .limit(1)
         .get();
     }
@@ -229,7 +231,7 @@ export async function POST(request: Request) {
      * ------------------------------------------------------------
      */
 
-    const face = officerRecord.face;
+    const face = officerRecord.enrollment?.face;
     const enrollment = officerRecord.enrollment;
 
     const faceEnrolled =
@@ -253,7 +255,26 @@ export async function POST(request: Request) {
      */
 
     const pinAuthentication =
-      officerRecord.authentication?.pin;
+      officerRecord.enrollment?.pin;
+
+    console.log('========== PIN STRUCTURE DEBUG ==========');
+
+    console.log({
+      hasEnrollment: !!officerRecord.enrollment,
+      enrollmentKeys: officerRecord.enrollment
+        ? Object.keys(officerRecord.enrollment)
+        : [],
+      hasEnrollmentPin: !!officerRecord.enrollment?.pin,
+      enrollmentPinKeys: officerRecord.enrollment?.pin
+        ? Object.keys(officerRecord.enrollment.pin)
+        : [],
+      pinConfigured:
+        officerRecord.enrollment?.pin?.configured,
+      pinAlgorithm:
+        officerRecord.enrollment?.pin?.algorithm,
+      pinHashPresent:
+        typeof officerRecord.enrollment?.pin?.hash === 'string',
+    });
 
     if (
       !pinAuthentication?.configured ||
@@ -431,6 +452,13 @@ export async function POST(request: Request) {
 
     let biometricResponse: Response;
 
+    console.log('========== BIOMETRIC REQUEST ==========');
+    console.log('Police ID:', actualPoliceId);
+    console.log('Provider URL:', FACE_PROVIDER_API_URL);
+    console.log('Has API key:', Boolean(BIOMETRIC_API_KEY));
+    console.log('Image buffer bytes:', imageBuffer.length);
+    console.log('=======================================');
+
     try {
       biometricResponse = await fetch(
         `${FACE_PROVIDER_API_URL}/v1/face/verify`,
@@ -464,6 +492,12 @@ export async function POST(request: Request) {
       biometricResult = null;
     }
 
+    console.log('========== BIOMETRIC VERIFICATION ==========');
+    console.log('Police ID:', actualPoliceId);
+    console.log('HTTP status:', biometricResponse.status);
+    console.log('Response:', biometricResult);
+    console.log('============================================');
+
     if (!biometricResponse.ok) {
       console.error(
         'Biometric verification failed:',
@@ -494,42 +528,63 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ------------------------------------------------------------
-     * 8. Verify Argon2id PIN
-     * ------------------------------------------------------------
-     */
+    * ------------------------------------------------------------
+    * 8. Verify Argon2id PIN
+    * ------------------------------------------------------------
+    */
+
+    const pinHash = pinAuthentication.hash;
+
+    if (
+      typeof pinHash !== 'string' ||
+      pinHash.length === 0
+    ) {
+      console.error('Police PIN hash is missing or invalid:', {
+        policeId: actualPoliceId,
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Police PIN authentication is not configured correctly.',
+        },
+        { status: 403 }
+      );
+    }
 
     let pinVerified = false;
 
     try {
-      pinVerified = await argon2.verify(
-        pinAuthentication.hash,
-        pin
-      );
+      pinVerified = await argon2.verify(pinHash, pin);
     } catch (error) {
-      console.error(
-        'PIN hash verification error:',
-        error
-      );
+      console.error('Argon2 PIN verification error:', {
+        policeId: actualPoliceId,
+        error,
+      });
 
       return NextResponse.json(
         {
           success: false,
-          error: 'PIN credential verification failed.',
+          error: 'Police PIN authentication failed.',
         },
-        { status: 401 }
+        { status: 500 }
       );
     }
 
     if (!pinVerified) {
+      console.warn('Invalid police PIN:', {
+        policeId: actualPoliceId,
+      });
+
       return NextResponse.json(
         {
           success: false,
-          error: 'Officer PIN credential verification failed.',
+          error: 'Invalid police ID or PIN.',
         },
         { status: 401 }
       );
     }
+
 
     /*
      * ------------------------------------------------------------
