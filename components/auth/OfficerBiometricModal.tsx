@@ -31,6 +31,7 @@ export const OfficerBiometricModal: React.FC<OfficerBiometricModalProps> = ({ is
   const [facialVerified, setFacialVerified] = useState(false);
   const [facialError, setFacialError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
 
   const [pin, setPin] = useState<string>('');
@@ -56,11 +57,19 @@ export const OfficerBiometricModal: React.FC<OfficerBiometricModalProps> = ({ is
 
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 300 } });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setCameraActive(true);
-        }
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const droidCam = devices.find(
+          (d) => d.kind === 'videoinput' && d.label.toLowerCase().includes('droidcam')
+        );
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: droidCam
+            ? { deviceId: { exact: droidCam.deviceId }, width: { ideal: 400 }, height: { ideal: 300 } }
+            : { width: { ideal: 400 }, height: { ideal: 300 } },
+        });
+
+        streamRef.current = stream;
+        setCameraActive(true);
       }
     } catch (e) {
       console.warn('Camera access denied or unavailable. Fallback to synthetic facial mesh.');
@@ -128,6 +137,22 @@ export const OfficerBiometricModal: React.FC<OfficerBiometricModalProps> = ({ is
   };
 
   if (!isOpen) return null;
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch((err) => {
+        console.error('Biometric modal video play error:', err);
+      });
+    }
+  }, [cameraActive]);
+
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">

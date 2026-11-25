@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../lib/context/AuthContext';
 import { fetchAndVerifyPoliceOfficer } from '../../lib/services/officerService';
 import { PoliceOfficerDoc } from '../../lib/types';
@@ -252,32 +252,27 @@ export const OfficerDutyLoginScreen: React.FC = () => {
         );
       }
 
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const droidCam = devices.find(
+        (d) => d.kind === 'videoinput' && d.label.toLowerCase().includes('droidcam')
+      );
+
       const stream =
         await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'user',
-            width: {
-              ideal: 1280,
-            },
-            height: {
-              ideal: 720,
-            },
-          },
+          video: droidCam
+            ? {
+                deviceId: { exact: droidCam.deviceId },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              }
+            : {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
           audio: false,
         });
 
       streamRef.current = stream;
-
-      if (!videoRef.current) {
-        throw new Error(
-          'Camera preview could not be initialized.'
-        );
-      }
-
-      videoRef.current.srcObject = stream;
-
-      await videoRef.current.play();
-
       setCameraActive(true);
 
       // --------------------------------------------------------
@@ -330,6 +325,8 @@ export const OfficerDutyLoginScreen: React.FC = () => {
             width,
             height
           );
+
+
 
           return new Promise<File | null>(
             (resolve) => {
@@ -621,6 +618,16 @@ export const OfficerDutyLoginScreen: React.FC = () => {
       );
     }
   };
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch((err) => {
+        console.error('Login screen video play error:', err);
+      });
+    }
+  }, [cameraActive]);
+
 
   // ------------------------------------------------------------
   // Render
