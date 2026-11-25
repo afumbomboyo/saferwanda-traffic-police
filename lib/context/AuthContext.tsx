@@ -46,7 +46,7 @@ interface AuthContextType {
     pin: string,
     livenessAuthorizationId: string,
     faceImage: string
-  ) => Promise<boolean>;
+  ) => Promise<{ success: boolean; error?: string }>;
 
   logout: () => Promise<void>;
 
@@ -143,7 +143,7 @@ export const AuthProvider: React.FC<{
     pin: string,
     livenessAuthorizationId: string,
     faceImage: string
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: string }> => {
     console.log(
       '========== AUTHENTICATE POLICE OFFICER CALLED =========='
     );
@@ -237,7 +237,7 @@ export const AuthProvider: React.FC<{
       setIsAuthenticated(true);
       setAuthError(null);
 
-      return true;
+      return { success: true };
     } catch (error: any) {
       console.error(
         'Police duty authentication failed:',
@@ -253,7 +253,7 @@ export const AuthProvider: React.FC<{
 
       setAuthError(message);
 
-      return false;
+      return { success: false, error: message };
     } finally {
       setIsAuthenticating(false);
     }

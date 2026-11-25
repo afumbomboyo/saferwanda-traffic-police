@@ -21,7 +21,6 @@ export const OfficerDutyLoginScreen: React.FC = () => {
   const {
     authenticatePoliceOfficer,
     isAuthenticating,
-    authError,
   } = useAuth();
 
   const [step, setStep] = useState<
@@ -590,7 +589,7 @@ export const OfficerDutyLoginScreen: React.FC = () => {
        *
        * to /api/auth/login.
        */
-      const success =
+      const result =
         await authenticatePoliceOfficer(
           policeId,
           pin,
@@ -598,12 +597,12 @@ export const OfficerDutyLoginScreen: React.FC = () => {
           faceImage || ''
         );
 
-      if (success) {
+      if (result.success) {
         setStep('SUCCESS');
       } else {
         setPinError(
-          authError ||
-          'Face + PIN verification failed.'
+          result.error ||
+          'Authentication could not be completed. Please try again.'
         );
       }
     } catch (error: any) {
@@ -614,7 +613,7 @@ export const OfficerDutyLoginScreen: React.FC = () => {
 
       setPinError(
         error?.message ||
-        'Face + PIN verification failed.'
+        'Authentication could not be completed. Please try again.'
       );
     }
   };

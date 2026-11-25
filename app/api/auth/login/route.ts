@@ -508,7 +508,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Facial verification failed.',
+          error: 'Facial verification service could not complete the face check. Your PIN was not checked; please try again.',
         },
         { status: 401 }
       );
@@ -521,7 +521,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Facial recognition verification failed.',
+          error: 'Face verification did not match the enrolled profile. Your PIN was not checked.',
         },
         { status: 401 }
       );
